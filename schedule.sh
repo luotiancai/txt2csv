@@ -38,8 +38,8 @@ echo $$ > "$LOCK_FILE"
 log "[INFO] 开始执行调度脚本..."
 
 # 执行主流程并记录每个子脚本输出
-./sftp_pull.sh >> "$LOG_FILE" 2>&1
-./txt2csv.sh >> "$LOG_FILE" 2>&1
+./sftp_pull.sh 2>&1 | tee -a "$LOG_FILE"
+./txt2csv.sh 2>&1 | tee -a "$LOG_FILE"
 
 log "[INFO] 脚本执行完毕，释放锁。"
 rm -f "$LOCK_FILE"
