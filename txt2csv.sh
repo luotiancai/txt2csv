@@ -40,7 +40,16 @@ for TXT_FILE in "${TXT_FILES[@]}"; do
   rm "$TMP_BODY"
 
   ACTUAL_SIZE=$(stat -c%s "$FULL_CSV")
-  OUTPUT_BASE="${RESULT_DIR}/${BASENAME}"
+
+  # 判断输出目录：是否严格匹配 udc_sbzj-YYYYMMDD 格式
+  if [[ "$BASENAME" =~ ^udc_sbzj-[0-9]{8}$ ]]; then
+    OUTPUT_DIR="${RESULT_DIR}/user"
+    mkdir -p "$OUTPUT_DIR"
+  else
+    OUTPUT_DIR="$RESULT_DIR"
+  fi
+
+  OUTPUT_BASE="${OUTPUT_DIR}/${BASENAME}"
 
   if [ "$ACTUAL_SIZE" -le "$MAX_SIZE" ]; then
     FINAL_OUTPUT="${OUTPUT_BASE}.csv"
