@@ -18,7 +18,7 @@ if [ ${#TXT_FILES[@]} -eq 0 ]; then
 fi
 
 BEL=$(printf '\x07')
-MAX_SIZE=$((19 * 1024 * 1024))
+MAX_SIZE=$((50 * 1024 * 1024))
 
 for TXT_FILE in "${TXT_FILES[@]}"; do
   BASENAME=$(basename "$TXT_FILE" .TXT)
@@ -54,18 +54,51 @@ for TXT_FILE in "${TXT_FILES[@]}"; do
   if [ "$ACTUAL_SIZE" -le "$MAX_SIZE" ]; then
     FINAL_OUTPUT="${OUTPUT_BASE}.csv"
     mv "$FULL_CSV" "$FINAL_OUTPUT"
-    log "✅ 转换完成：$FINAL_OUTPUT（未超过 19MB）"
+    log "✅ 转换完成：$FINAL_OUTPUT（未超过 50MB）"
     continue
   fi
 
-  log "⚠️ 文件超过 19MB，开始拆分..."
+  log "⚠️ 文件超过 50MB，开始按行拆分..."
 
   HEADER_LINE=$(head -n 1 "$FULL_CSV")
   tail -n +2 "$FULL_CSV" > "${FULL_CSV}.body"
-  split -b 19m -d --additional-suffix=.part "${FULL_CSV}.body" tmp_split_
+
+  TOTAL_LINES=$(wc -l < "${FULL_CSV}.body")
+  LOW=1000
+  HIGH=$TOTAL_LINES
+  BEST_N=0
+
+  while (( LOW <= HIGH )); do
+    MID=$(( (LOW + HIGH) / 2 ))
+    split -l "$MID" "${FULL_CSV}.body" tmp_estimate_
+
+    MAX_OBSERVED_SIZE=0
+    for FILE in tmp_estimate_*; do
+      FILE_SIZE=$(stat -c%s "$FILE")
+      (( FILE_SIZE > MAX_OBSERVED_SIZE )) && MAX_OBSERVED_SIZE=$FILE_SIZE
+    done
+    rm -f tmp_estimate_*
+
+    if (( MAX_OBSERVED_SIZE < MAX_SIZE )); then
+      BEST_N=$MID
+      LOW=$((MID + 1))
+    else
+      HIGH=$((MID - 1))
+    fi
+  done
+
+  if (( BEST_N == 0 )); then
+    log "❌ 无法找到合适的拆分行数，跳过该文件"
+    rm -f "$FULL_CSV" "${FULL_CSV}.body"
+    continue
+  fi
+
+  log "ℹ️ 估算每份最大行数：$BEST_N，开始正式拆分..."
+
+  split -l "$BEST_N" "${FULL_CSV}.body" tmp_part_
 
   INDEX=1
-  for FILE in tmp_split_*.part; do
+  for FILE in tmp_part_*; do
     OUT_FILE="${OUTPUT_BASE}-${INDEX}.csv"
     {
       echo "$HEADER_LINE"
@@ -75,7 +108,7 @@ for TXT_FILE in "${TXT_FILES[@]}"; do
     ((INDEX++))
   done
 
-  rm tmp_split_*.part "$FULL_CSV" "${FULL_CSV}.body"
+  rm -f tmp_part_* "$FULL_CSV" "${FULL_CSV}.body"
 done
 
 log "🎉 所有文件处理完成。"
