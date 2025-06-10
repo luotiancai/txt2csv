@@ -1,1 +1,1 @@
-identities.scuserid,identities.customerid,eventDate,channel_Source,traceID,action,customerID,appID,s_userId,employeeFlag,s_url,s_refererUrl,page_Name,login_Method,is_Success,fail_Reason
+identities.scuserid,identities.customerid,eventDate,props.channel_Source,props.traceID,props.action,props.customerID,props.appID,props.s_userId,props.employeeFlag,props.s_url,props.s_refererUrl,props.page_Name,props.login_Method,props.is_Success,props.fail_Reason
